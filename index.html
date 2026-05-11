@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fisch AI Wiki Assistant</title>
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0b1220;
+    color:white;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    color:#38bdf8;
+}
+
+.chat{
+    height:70vh;
+    overflow-y:auto;
+    background:#111827;
+    padding:15px;
+    border-radius:12px;
+}
+
+.msg{
+    padding:10px;
+    margin:10px 0;
+    border-radius:10px;
+    line-height:1.5;
+    white-space:pre-wrap;
+}
+
+.user{
+    background:#2563eb;
+    text-align:right;
+}
+
+.ai{
+    background:#1f2937;
+}
+
+.inputBox{
+    display:flex;
+    margin-top:10px;
+}
+
+input{
+    flex:1;
+    padding:12px;
+    border-radius:8px;
+    border:none;
+    outline:none;
+}
+
+button{
+    padding:12px;
+    margin-left:10px;
+    border:none;
+    border-radius:8px;
+    background:#38bdf8;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+small{
+    display:block;
+    text-align:center;
+    margin-top:10px;
+    color:gray;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎣 Fisch AI Wiki Assistant</h1>
+
+    <div class="chat" id="chat">
+        <div class="msg ai">
+Írj be bármit pl:
+• Heaven Rod
+• Lullaby Rod
+• Trident Rod
+
+Én a Fisch Wiki-ből keresek és összefoglalom.
+        </div>
+    </div>
+
+    <div class="inputBox">
+        <input id="input" placeholder="Írd ide: pl. Heaven Rod" />
+        <button onclick="send()">Send</button>
+    </div>
+
+    <small>Created by zeal</small>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+
+input.addEventListener("keypress", e=>{
+    if(e.key === "Enter") send();
+});
+
+function addMsg(text, type){
+    let div = document.createElement("div");
+    div.className = "msg " + type;
+    div.innerHTML = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+async function send(){
+    let q = input.value.trim();
+    if(!q) return;
+
+    addMsg(q,"user");
+    input.value="";
+
+    addMsg("🔎 Wiki keresés...","ai");
+
+    try{
+        let searchUrl = `https://fisch.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`;
+
+        let res = await fetch(searchUrl);
+        let data = await res.json();
+
+        if(!data.query.search.length){
+            addMsg("❌ Nincs találat a wiki-n.","ai");
+            return;
+        }
+
+        let title = data.query.search[0].title;
+
+        let pageUrl = `https://fisch.fandom.com/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*`;
+
+        let pageRes = await fetch(pageUrl);
+        let pageData = await pageRes.json();
+
+        let html = pageData.parse.text["*"];
+
+        let temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        let text = temp.innerText;
+
+        if(text.length > 2000) text = text.slice(0,2000) + "...";
+
+        addMsg(
+`<b>${title}</b><br><br>${text}<br><br>📌 Source: Fisch Wiki`
+        ,"ai");
+
+    }catch(e){
+        console.log(e);
+        addMsg("⚠️ Hiba történt a wiki betöltés közben (CORS / API).","ai");
+    }
+}
+</script>
+
+</body>
+</html>
